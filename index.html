@@ -43,18 +43,15 @@
             position: relative;
         }
 
-        .teacher-frame img {
-            /* 修正箇所：画像を拡大して余白を消し去る設定 */
+        /* 修正済みCSS：ここを直しておいたわよ */
         .teacher-frame img {
             width: 100%;
             height: 100%;
             object-fit: cover; /* 枠に合わせて埋める */
             
-            /* ▼ ここが魔法の呪文よ ▼ */
-            transform: scale(1.6);       /* 画像を1.6倍にズーム！余白を枠外へ追放する */
-            object-position: center 15%; /* 顔の位置合わせ。少し上(15%)を中心にする */
-            /* ▲ ▲ */
-        }
+            /* ズームと位置調整 */
+            transform: scale(1.6);       
+            object-position: center 15%; 
         }
 
         /* 音声波形キャンバス */
@@ -141,7 +138,7 @@
 
     <div class="container">
         <div class="teacher-frame">
-            <img src="santos.jpg" alt="Mr. Santos" onerror="this.src='https://via.placeholder.com/200?text=No+Image'; this.style.backgroundColor='#ccc';">
+            <img src="santos.gif" alt="Mr. Santos" onerror="this.src='https://via.placeholder.com/200?text=No+Image'; this.style.backgroundColor='#ccc';">
         </div>
 
         <canvas id="visualizer"></canvas>
@@ -158,8 +155,7 @@
 
     <script>
         // --- Logic Architect: Makise Kurisu ---
-        // ここからスクリプトよ。しっかり読みなさい。
-
+        
         // Elements
         const btnRecord = document.getElementById('btn-record');
         const btnStop = document.getElementById('btn-stop');
@@ -180,21 +176,19 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             
-            // --- Settings for "Japan English" tolerance ---
-            recognition.lang = 'en-US'; // 英語モード固定。これで日本語は無視されやすくなる。
-            recognition.interimResults = false; // 途中経過は出さない（完了時にドンと出す）
-            recognition.maxAlternatives = 1; // 迷ったら一番近いものを一つだけ
+            // Settings
+            recognition.lang = 'en-US'; 
+            recognition.interimResults = false; 
+            recognition.maxAlternatives = 1; 
 
             // Result Event
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
-                // ここで少しだけ判定ロジック。あまりに短いノイズなどは無視してもいいかもね。
                 resultArea.textContent = transcript;
                 statusText.textContent = "Great job!";
             };
 
             recognition.onspeechend = () => {
-                // 自動的に止まる場合もあるけど、基本はStopボタン制御にするわ
                 // stopRecording(); 
             };
 
@@ -208,31 +202,26 @@
             };
         }
 
-        // --- Variables for Audio Visualizer ---
+        // Variables for Audio Visualizer
         let audioContext;
         let analyser;
         let dataArray;
         let source;
         let animationId;
 
-        // --- Functions ---
-
+        // Functions
         async function startRecording() {
             if (isRecording) return;
             
             try {
-                // Start Speech Recognition
                 recognition.start();
                 isRecording = true;
 
-                // UI Update
                 btnRecord.disabled = true;
                 btnStop.disabled = false;
                 resultArea.textContent = "Listening...";
                 statusText.textContent = "Santos is listening to you...";
 
-                // Setup Audio Context for Visualizer
-                // マイクへのアクセス権限をリクエストするわよ
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
                 if (!audioContext) {
@@ -260,17 +249,14 @@
         function stopRecording() {
             if (!isRecording) return;
 
-            recognition.stop(); // 認識終了 -> onresultが発火する
+            recognition.stop(); 
             isRecording = false;
 
-            // UI Update
             btnRecord.disabled = false;
             btnStop.disabled = true;
             statusText.textContent = "Processing...";
 
-            // Stop Visualizer
             cancelAnimationFrame(animationId);
-            // 波形をクリア
             canvasCtx.fillStyle = '#222';
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
         }
@@ -294,11 +280,8 @@
 
             for (let i = 0; i < dataArray.length; i++) {
                 barHeight = dataArray[i] / 2;
-
-                // 色を少しオシャレに（サントスレッドから青へ）
                 canvasCtx.fillStyle = `rgb(${barHeight + 100}, 50, 50)`;
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
                 x += barWidth + 1;
             }
         }
@@ -310,5 +293,4 @@
 
     </script>
 </body>
-
 </html>
