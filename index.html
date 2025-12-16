@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santos English Check</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        /* サントス先生の表示エリア */
+        .teacher-frame {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 5px solid #e74c3c; /* 赤いセーターに合わせて赤枠 */
+            position: relative;
+        }
+
+        .teacher-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 音声波形キャンバス */
+        canvas {
+            width: 100%;
+            height: 80px;
+            background-color: #222;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* 結果表示エリア */
+        #result-area {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            min-height: 60px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        button {
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: translateY(2px);
+        }
+
+        #btn-record {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        #btn-record:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #btn-stop {
+            background-color: #34495e;
+            color: white;
+        }
+
+        #btn-stop:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #btn-reset {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>English Talk with Santos</h1>
+
+    <div class="container">
+        <div class="teacher-frame">
+            <img src="santos.jpg" alt="Mr. Santos" onerror="this.src='https://via.placeholder.com/200?text=No+Image'; this.style.backgroundColor='#ccc';">
+        </div>
+
+        <canvas id="visualizer"></canvas>
+
+        <div id="result-area">Ready?</div>
+
+        <div class="controls">
+            <button id="btn-record">Start Talking</button>
+            <button id="btn-stop" disabled>Stop</button>
+            <button id="btn-reset">Reset</button>
+        </div>
+        <div class="status" id="status-text">Press 'Start' to begin lesson.</div>
+    </div>
+
+    <script>
+        // --- Logic Architect: Makise Kurisu ---
+        // ここからスクリプトよ。しっかり読みなさい。
+
+        // Elements
+        const btnRecord = document.getElementById('btn-record');
+        const btnStop = document.getElementById('btn-stop');
+        const btnReset = document.getElementById('btn-reset');
+        const resultArea = document.getElementById('result-area');
+        const statusText = document.getElementById('status-text');
+        const canvas = document.getElementById('visualizer');
+        const canvasCtx = canvas.getContext('2d');
+
+        // Variables for Speech Recognition
+        let recognition;
+        let isRecording = false;
+
+        // Check browser support
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Chromebookじゃないの？ このブラウザはWeb Speech APIに対応していないわ。Chromeを使いなさい。");
+        } else {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            // --- Settings for "Japan English" tolerance ---
+            recognition.lang = 'en-US'; // 英語モード固定。これで日本語は無視されやすくなる。
+            recognition.interimResults = false; // 途中経過は出さない（完了時にドンと出す）
+            recognition.maxAlternatives = 1; // 迷ったら一番近いものを一つだけ
+
+            // Result Event
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                // ここで少しだけ判定ロジック。あまりに短いノイズなどは無視してもいいかもね。
+                resultArea.textContent = transcript;
+                statusText.textContent = "Great job!";
+            };
+
+            recognition.onspeechend = () => {
+                // 自動的に止まる場合もあるけど、基本はStopボタン制御にするわ
+                // stopRecording(); 
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Error occurred in recognition: " + event.error);
+                if(event.error === 'no-speech') {
+                    statusText.textContent = "No speech detected. Speak louder!";
+                } else {
+                    statusText.textContent = "Error: " + event.error;
+                }
+            };
+        }
+
+        // --- Variables for Audio Visualizer ---
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let source;
+        let animationId;
+
+        // --- Functions ---
+
+        async function startRecording() {
+            if (isRecording) return;
+            
+            try {
+                // Start Speech Recognition
+                recognition.start();
+                isRecording = true;
+
+                // UI Update
+                btnRecord.disabled = true;
+                btnStop.disabled = false;
+                resultArea.textContent = "Listening...";
+                statusText.textContent = "Santos is listening to you...";
+
+                // Setup Audio Context for Visualizer
+                // マイクへのアクセス権限をリクエストするわよ
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                analyser = audioContext.createAnalyser();
+                source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                drawVisualizer();
+
+            } catch (err) {
+                console.error("Microphone access denied or error:", err);
+                alert("マイクが使えないわ。許可設定を確認しなさい。");
+                isRecording = false;
+                btnRecord.disabled = false;
+            }
+        }
+
+        function stopRecording() {
+            if (!isRecording) return;
+
+            recognition.stop(); // 認識終了 -> onresultが発火する
+            isRecording = false;
+
+            // UI Update
+            btnRecord.disabled = false;
+            btnStop.disabled = true;
+            statusText.textContent = "Processing...";
+
+            // Stop Visualizer
+            cancelAnimationFrame(animationId);
+            // 波形をクリア
+            canvasCtx.fillStyle = '#222';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function resetApp() {
+            if (isRecording) stopRecording();
+            resultArea.textContent = "Ready?";
+            statusText.textContent = "Press 'Start' to begin lesson.";
+        }
+
+        function drawVisualizer() {
+            animationId = requestAnimationFrame(drawVisualizer);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.fillStyle = '#222';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / dataArray.length) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                barHeight = dataArray[i] / 2;
+
+                // 色を少しオシャレに（サントスレッドから青へ）
+                canvasCtx.fillStyle = `rgb(${barHeight + 100}, 50, 50)`;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1;
+            }
+        }
+
+        // Event Listeners
+        btnRecord.addEventListener('click', startRecording);
+        btnStop.addEventListener('click', stopRecording);
+        btnReset.addEventListener('click', resetApp);
+
+    </script>
+</body>
+</html>
