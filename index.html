@@ -44,9 +44,17 @@
         }
 
         .teacher-frame img {
+            /* 修正箇所：画像を拡大して余白を消し去る設定 */
+        .teacher-frame img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* 枠に合わせて埋める */
+            
+            /* ▼ ここが魔法の呪文よ ▼ */
+            transform: scale(1.6);       /* 画像を1.6倍にズーム！余白を枠外へ追放する */
+            object-position: center 15%; /* 顔の位置合わせ。少し上(15%)を中心にする */
+            /* ▲ ▲ */
+        }
         }
 
         /* 音声波形キャンバス */
@@ -302,4 +310,5 @@
 
     </script>
 </body>
+
 </html>
